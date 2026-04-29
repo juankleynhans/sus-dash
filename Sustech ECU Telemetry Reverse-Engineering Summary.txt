@@ -1,0 +1,263 @@
+Sustech ECU Telemetry Reverse-Engineering Summary
+Progress Report / Technical Write-Up for Developer Review
+
+1. Objective
+
+The goal of this work was to understand and decode the live serial telemetry stream from the Sustech ECU in order to:
+
+Read live engine data without the original tuning software
+Integrate the ECU with a custom digital dashboard
+Validate packet structure and sensor scaling
+Understand how the ECU transmits runtime values
+
+This was done using captured serial logs, live testing, and comparison against the Sustech debug screen.
+
+2. Discovery of Packet Framing
+
+Initial raw hex logs showed repeated structured data. After analysis, a consistent header was identified:
+
+83 84 65 82 84
+
+Converted to ASCII:
+
+S T A R T
+
+This confirmed the ECU sends framed packets beginning with:
+
+START
+Result:
+
+The telemetry stream is not random data — it is a structured packet protocol with a fixed header.
+
+3. Packet Synchronization
+
+Early decoding attempts assumed fixed byte spacing, which caused:
+
+RPM spikes
+Incorrect values
+Jumping frames
+Misaligned sensor reads
+
+Once packet synchronization was changed to search for:
+
+START
+
+before reading each frame, telemetry became stable.
+
+Result:
+
+Reliable parsing requires syncing on the packet header, not arbitrary byte offsets.
+
+4. Packet Size Identification
+
+Through repeated captures and testing, the working runtime telemetry frame size appears to be approximately:
+
+120 bytes
+
+This frame contains both core engine values and additional unused/unknown fields.
+
+Result:
+
+The ECU appears to transmit a large structured memory block containing many live values.
+
+5. Confirmed Sensor Locations (Current Progress)
+
+The following packet positions have been identified and tested:
+
+Packet Byte(s)	Function	Status
+0–4	Header (START)	Confirmed
+6	RPM (1-byte working mode)	Confirmed usable
+6–7	RPM (16-bit mode under testing)	In progress
+13	MAP / Boost	Confirmed
+14	TPS	Confirmed
+16–17	Coolant Temp	Confirmed raw source
+18–19	Intake Air Temp	Confirmed raw source
+20–21	Battery Voltage	Confirmed
+6. RPM Decoding Findings
+
+Multiple methods were tested.
+
+Observations:
+1-byte RPM mode:
+packet[6] × 10
+
+Produces usable values:
+
+Idle = close
+Rev range = close
+Stable during normal use
+2-byte RPM mode:
+
+Combining bytes improves resolution, but packet timing or byte order may vary under throttle transitions.
+
+Current Conclusion:
+
+The ECU definitely stores RPM across two bytes internally, but byte ordering or frame timing needs final confirmation.
+
+7. MAP / Boost Decoding
+
+Vehicle uses:
+
+4 bar MAP sensor installed
+ECU configured to 2.250 bar span
+
+The ECU appears to output a scaled MAP byte rather than raw sensor voltage.
+
+Working conversion:
+
+Boost(bar) = (MAP_byte × 3.25 / 255) - 1.0
+
+Where:
+
+-1.0 bar = full vacuum reference
++2.25 bar = configured max boost span
+Result:
+
+Live boost values closely match dashboard readings.
+
+8. TPS Decoding
+
+Throttle Position Sensor is available as:
+
+packet[14]
+
+This appears to be a direct percentage or scaled byte.
+
+Result:
+
+TPS changes correctly with throttle movement.
+
+9. Battery Voltage
+
+Battery decoding is confirmed and stable.
+
+Working formula:
+
+Battery = raw_value / 64
+
+This produces realistic charging voltages:
+
+12.5V engine off
+13.8–14.4V running
+Result:
+
+Battery scaling confirmed.
+
+10. Coolant Temp & Intake Air Temp Analysis
+
+Both sensors were found to use 2-byte values:
+
+Coolant = packet[16–17]
+Air Temp = packet[18–19]
+
+These values decrease as temperature rises, which matches NTC thermistor behavior.
+
+Important Discovery:
+
+The Sustech software uses editable sensor tables, meaning temperature is not a simple multiplier/divider.
+
+It uses calibration curves based on thermistor resistance.
+
+Coolant Table Provided:
+Temp °C	Resistance Ω
+-20	15369
+0	5956
+20	2774
+40	1431
+60	805
+80	309
+100	171
+120	89
+Air Temp Table Provided:
+Temp °C	Resistance Ω
+-20	15369
+0	5956
+20	2557
+40	1167
+60	596
+80	325
+100	187
+120	113
+Result:
+
+Temperature sensors are being decoded using lookup-table logic rather than linear scaling.
+
+11. Methodology Used
+
+The reverse-engineering process used:
+
+Static Log Analysis
+
+Captured raw ECU serial logs and identified repeating packet structures.
+
+Live Parsing
+
+Built Python tools to:
+
+Read serial data live
+Synchronize on packet headers
+Decode fields in real time
+Cross Validation
+
+Compared decoded values against:
+
+Sustech debug screen
+Actual engine behavior
+Known sensor behavior
+Vehicle gauges
+12. Current Working Python Decoder
+
+A functional live parser now reads:
+
+RPM
+Boost
+TPS
+Battery
+Raw temperature values
+
+with stable packet sync.
+
+13. What This Suggests About ECU Design
+
+The ECU appears to transmit a serialized runtime structure containing internal variables.
+
+This is a strong and efficient design because it allows:
+
+Fast PC software updates
+Easy debugging
+Low CPU overhead
+Expandable telemetry
+14. Remaining Unknown Fields
+
+Because the packet is ~120 bytes and only ~22 bytes are currently mapped, additional values likely exist such as:
+
+Ignition timing
+Injector pulse width
+AFR / Lambda
+Knock feedback
+Idle control
+Vehicle speed
+Boost target
+Fuel trims
+ECU internal status flags
+15. Future Possibilities
+
+With further protocol documentation or collaboration, it would be possible to build:
+
+Open Telemetry Integration
+RealDash support
+CAN bus gateway
+Raspberry Pi digital dash
+Logging Tools
+Independent data logger
+CSV exports
+Track analysis
+Tuning Utilities
+Table extraction
+Map viewing
+Live tuning tools
+16. Final Notes
+
+The work so far confirms the Sustech ECU uses a robust and well-structured telemetry system. Most core live engine data has already been successfully identified.
+
+With official protocol guidance or packet documentation, complete third-party integration would be straightforward.
