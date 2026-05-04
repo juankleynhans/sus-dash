@@ -3,14 +3,14 @@
 
 This project started as an idea. 
 
-This project aims to decode the serial output from the Sustech & Dicator ECU found in South Africa.
+This project aims to decode the serial output from the Sustech & Dictator ECU found in South Africa.
 
 Once decoded, we will be able to utilise it for OpenSource Digital dashes or custom-built dashes. 
 
 So far, I have managed to locate the serial packet locations of RPM, TPS, Battery, Fuel, Boost, CLT, and AIR TEMP. I am just having a scaling issue with the RPM Sensors
 
-Managed to get most of the sensors working, and scaling is almost perfect, still busy with the RPM. 
+Managed to get most of the sensors working, and scaling is almost perfect; I'm still busy with the RPM. 
 
 So far, everything has been done in Python. 
 
-Future plans are realdash intergration and possible custome hardware. 
+Plans are realdash integration and possible custom hardware. 
