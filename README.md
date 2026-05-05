@@ -1,7 +1,7 @@
 <img width="629" height="61" alt="image" src="https://github.com/user-attachments/assets/c86e37a1-b33b-4277-aa89-cd0feab867e6" />
 
 
-                                                                             **70% Decoded**
+  **70% Decoded**
 
 This project started as an idea. 
 
