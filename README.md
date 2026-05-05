@@ -3,6 +3,8 @@
 
 This project started as an idea. 
 
+**70% Decoded** 
+
 This project aims to decode the serial output from the Sustech & Dictator ECU found in South Africa.
 
 Once decoded, we will be able to utilise it for OpenSource Digital dashes or custom-built dashes. 
@@ -14,3 +16,15 @@ Managed to get most of the sensors working, and scaling is almost perfect; I'm s
 So far, everything has been done in Python. 
 
 Plans are realdash integration and possible custom hardware. 
+
+** Screenshots of WIP**
+
+
+**Busy with an emulator for out-of-car testing**
+
+**Work in Progress**
+
+1. Python Digital Dash
+2. Realdash CAN integration with ESP32
+   
+
